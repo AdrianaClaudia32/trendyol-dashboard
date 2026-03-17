@@ -1,0 +1,15 @@
+{
+  "name": "trendyol-dashboard",
+  "version": "1.0.0",
+  "description": "Dashboard comenzi Trendyol RO/BG/HU",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
