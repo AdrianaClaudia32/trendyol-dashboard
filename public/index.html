@@ -98,7 +98,7 @@
   <div class="modal-dialog modal-lg"><div class="modal-content">
     <div class="modal-header" style="background:#1c1c1c;color:#fff"><h5 class="modal-title"><i class="bi bi-gear-fill me-2"></i>Configurare API Trendyol</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
     <div class="modal-body">
-      <div class="settings-section"><h6><i class="bi bi-key-fill me-1"></i>Credentiale API</h6><div class="row g-2"><div class="col-md-4"><label class="form-label small">Supplier ID</label><input type="text" class="form-control form-control-sm" id="supplierId"></div><div class="col-md-4"><label class="form-label small">API Key</label><input type="text" class="form-control form-control-sm" id="apiKey" autocomplete="off"></div><div class="col-md-4"><label class="form-label small">API Secret</label><input type="password" class="form-control form-control-sm" id="apiSecret" autocomplete="off"></div></div></div>
+      <div class="settings-section"><h6><i class="bi bi-key-fill me-1"></i>Credentiale API</h6><div class="row g-2"><div class="col-md-4"><label class="form-label small">Supplier ID</label><input type="text" class="form-control form-control-sm" id="supplierId"></div><div class="col-md-4"><label class="form-label small">API Key</label><input type="text" class="form-control form-control-sm" id="apiKey" autocomplete="off"></div><div class="col-md-4"><label class="form-label small">API Secret</label><input type="password" class="form-control form-control-sm" id="apiSecret" autocomplete="off"></div><div class="col-12"><label class="form-label small">Cod referinta integrare</label><input type="text" class="form-control form-control-sm" id="integrationCode" placeholder="ex: 7f338d12-686e-4689-b92b-b5e24893a5e8"></div></div></div>
       <div class="settings-section"><h6><i class="bi bi-globe me-1"></i>Base URLs</h6><div class="row g-2"><div class="col-12"><label class="form-label small">Romania</label><input type="text" class="form-control form-control-sm" id="roUrl" placeholder="https://apigw.trendyol.com"></div><div class="col-12"><label class="form-label small">Bulgaria</label><input type="text" class="form-control form-control-sm" id="bgUrl" placeholder="https://apigw.trendyol.com"></div><div class="col-12"><label class="form-label small">Ungaria</label><input type="text" class="form-control form-control-sm" id="huUrl" placeholder="https://apigw.trendyol.com"></div></div></div>
       <div class="settings-section"><h6><i class="bi bi-sliders me-1"></i>General</h6><div class="row g-2"><div class="col-md-4"><label class="form-label small">Zile in urma</label><input type="number" class="form-control form-control-sm" id="cfgDays" value="30" min="1" max="365"></div><div class="col-md-4"><label class="form-label small">Comenzi per apel</label><select class="form-select form-select-sm" id="cfgPageSize"><option value="50">50</option><option value="100">100</option><option value="200" selected>200</option></select></div></div></div>
     </div>
@@ -161,7 +161,7 @@ async function fetchAllOrders() {
   const endTs    = Date.now();
   const startTs  = endTs - days * 86400000;
   const creds    = btoa(s.apiKey + ':' + s.apiSecret);
-  const proxyHeaders = { 'x-trendyol-auth': 'Basic ' + creds, 'x-trendyol-agent': s.supplierId + ' - SelfIntegration' };
+  const proxyHeaders = { 'x-trendyol-auth': 'Basic ' + creds, 'x-trendyol-agent': s.supplierId + ' - ' + (s.integrationCode || 'SelfIntegration') };
   _debugRaw = null; _debugUrl = null;
   setStatus('Se conecteaza la API prin server...', 'info');
   let result = [], page = 0, totalPages = 1;
@@ -395,6 +395,10 @@ document.addEventListener('DOMContentLoaded', () => {
       urls: { RO: 'https://apigw.trendyol.com', BG: 'https://apigw.trendyol.com', HU: 'https://apigw.trendyol.com' },
       days: 365, pageSize: 200
     }));
+  }
+  } else if (!s.integrationCode) {
+    s.integrationCode = '7f338d12-686e-4689-b92b-b5e24893a5e8';
+    localStorage.setItem('ty_cfg', JSON.stringify(s));
   }
   fetchAll();
 });
