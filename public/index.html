@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trendyol — Dashboard Comenzi</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <style>
+    :root { --ty: #F27A1A; --ty-dark: #d96a0c; --ty-bg: #f0f2f5; }
+    body { background: var(--ty-bg); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .navbar { background: #1c1c1c !important; }
+    .brand-logo { font-weight: 800; font-size: 1.3rem; color: var(--ty) !important; letter-spacing: -0.5px; }
+    .brand-sub  { font-weight: 400; font-size: 0.95rem; color: #aaa; }
+    .btn-ty { background: var(--ty); border-color: var(--ty); color: #fff; }
+    .btn-ty:hover { background: var(--ty-dark); border-color: var(--ty-dark); color: #fff; }
+    .stat-card { background: #fff; border-radius: 12px; padding: 18px 20px; box-shadow: 0 2px 8px rgba(0,0,0,.06); border-left: 4px solid var(--ty); transition: transform .18s; }
+    .stat-card:hover { transform: translateY(-2px); }
+    .stat-label { font-size: .78rem; color: #888; text-transform: uppercase; letter-spacing: .4px; }
+    .stat-value { font-size: 1.9rem; font-weight: 700; line-height: 1.2; }
+    .filter-bar { background: #fff; border-radius: 12px; padding: 14px 18px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 20px; }
+    .table-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.06); overflow: hidden; }
+    .table-card thead th { background: #2c2c2c; color: #fff; border: none; font-weight: 500; font-size: .85rem; padding: 12px 14px; }
+    .table-card tbody td { vertical-align: middle; font-size: .88rem; padding: 10px 14px; }
+    .table-card tbody tr.data-row { cursor: pointer; transition: background .12s; }
+    .table-card tbody tr.data-row:hover { background: #fff8f2; }
+    .sbadge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: .78rem; font-weight: 600; white-space: nowrap; }
+    .s-Created    { background:#fff3cd; color:#856404; }
+    .s-Picking    { background:#cfe2ff; color:#084298; }
+    .s-Invoiced   { background:#d1ecf1; color:#0c5460; }
+    .s-Shipped    { background:#d4edda; color:#155724; }
+    .s-Delivered  { background:#c3e6cb; color:#155724; }
+    .s-Cancelled  { background:#f8d7da; color:#721c24; }
+    .s-UnDelivered{ background:#f8d7da; color:#721c24; }
+    .s-Returned   { background:#ffeeba; color:#856404; }
+    .s-UnPackaged { background:#e2e3e5; color:#383d41; }
+    .detail-row { display: none; background: #fafafa; }
+    .detail-row.open { display: table-row; }
+    .detail-inner { padding: 16px 20px; }
+    .detail-table { font-size: .82rem; }
+    .detail-table th { background: #f0f0f0; font-weight: 600; }
+    .prod-line { font-size: .82rem; line-height: 1.5; }
+    .prod-more  { font-size: .75rem; color: #999; }
+    .settings-section { background: #f8f9fa; border-radius: 8px; padding: 14px 16px; margin-bottom: 14px; }
+    .settings-section h6 { color: var(--ty); font-weight: 700; margin-bottom: 10px; }
+    .cors-box { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px 14px; font-size: .85rem; }
+    #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 9999; justify-content: center; align-items: center; }
+    #overlay.on { display: flex; }
+    .spinner-ty { color: var(--ty) !important; width: 3rem; height: 3rem; }
+    #toasts { position: fixed; top: 72px; right: 18px; z-index: 10000; }
+    .toast-msg { padding: 11px 16px; border-radius: 8px; margin-bottom: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.18); font-size: .88rem; max-width: 340px; animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+    .empty-state { text-align: center; padding: 60px 20px; color: #aaa; }
+    .empty-state i { font-size: 3.5rem; display: block; margin-bottom: 12px; }
+    .page-link { color: var(--ty); }
+    .page-item.active .page-link { background: var(--ty); border-color: var(--ty); color: #fff; }
+  </style>
+</head>
+<body>
+<div id="overlay"><div class="text-center text-white"><div class="spinner-border spinner-ty" role="status"></div><div id="overlayText" class="mt-3">Se incarca comenzile...</div></div></div>
+<div id="toasts"></div>
+<nav class="navbar navbar-dark px-3 py-2">
+  <div class="d-flex align-items-center gap-2"><span class="brand-logo">Trendyol</span><span class="brand-sub">Dashboard Comenzi</span></div>
+  <div class="d-flex align-items-center gap-2">
+    <span class="text-muted small d-none d-md-inline" id="lastSync"></span>
+    <button class="btn btn-sm btn-ty" onclick="fetchAll()" id="btnRefresh"><i class="bi bi-arrow-clockwise me-1"></i>Actualizeaza</button>
+    <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#modalSettings"><i class="bi bi-gear-fill me-1"></i>Setari API</button>
+  </div>
+</nav>
+<div id="statusBar" style="display:none; padding:10px 20px; font-size:.88rem; font-weight:500;"></div>
+<div class="container-fluid py-4 px-3 px-md-4">
+  <div class="row g-3 mb-4" id="statsRow">
+    <div class="col-6 col-md-4 col-lg-2"><div class="stat-card"><div class="stat-label">Total comenzi</div><div class="stat-value" id="sTotal">0</div><div class="stat-label mt-1" id="sCountries"></div></div></div>
+    <div class="col-6 col-md-4 col-lg-2"><div class="stat-card" style="border-left-color:#ffc107"><div class="stat-label">Noi / Procesare</div><div class="stat-value text-warning" id="sPending">0</div></div></div>
+    <div class="col-6 col-md-4 col-lg-2"><div class="stat-card" style="border-left-color:#0d6efd"><div class="stat-label">Expediate</div><div class="stat-value text-primary" id="sShipped">0</div></div></div>
+    <div class="col-6 col-md-4 col-lg-2"><div class="stat-card" style="border-left-color:#198754"><div class="stat-label">Livrate</div><div class="stat-value text-success" id="sDelivered">0</div></div></div>
+    <div class="col-6 col-md-4 col-lg-2"><div class="stat-card" style="border-left-color:#dc3545"><div class="stat-label">Anulate / Returnate</div><div class="stat-value text-danger" id="sCancelled">0</div></div></div>
+    <div class="col-6 col-md-4 col-lg-2"><div class="stat-card" style="border-left-color:#6f42c1"><div class="stat-label">Valoare totala</div><div class="stat-value" style="font-size:1.15rem;color:#6f42c1" id="sValue">0</div></div></div>
+  </div>
+  <div class="filter-bar">
+    <div class="row g-2 align-items-end">
+      <div class="col-12 col-md-3"><label class="form-label small text-muted mb-1">Cauta (nr. comanda / produs / SKU)</label><div class="input-group input-group-sm"><span class="input-group-text"><i class="bi bi-search"></i></span><input type="text" class="form-control" id="fSearch" placeholder="Cautare..." oninput="applyFilters()"></div></div>
+      <div class="col-6 col-md-2"><label class="form-label small text-muted mb-1">Tara</label><select class="form-select form-select-sm" id="fCountry" onchange="applyFilters()"><option value="">Toate</option><option value="RO">Romania</option><option value="BG">Bulgaria</option><option value="HU">Ungaria</option></select></div>
+      <div class="col-6 col-md-2"><label class="form-label small text-muted mb-1">Status</label><select class="form-select form-select-sm" id="fStatus" onchange="applyFilters()"><option value="">Toate statusurile</option><option value="Created">Creat</option><option value="Picking">Picking</option><option value="Invoiced">Facturat</option><option value="Shipped">Expediat</option><option value="Delivered">Livrat</option><option value="Cancelled">Anulat</option><option value="UnDelivered">Nelivrat</option><option value="Returned">Returnat</option></select></div>
+      <div class="col-6 col-md-2"><label class="form-label small text-muted mb-1">De la</label><input type="date" class="form-control form-control-sm" id="fDateFrom" onchange="applyFilters()"></div>
+      <div class="col-6 col-md-2"><label class="form-label small text-muted mb-1">Pana la</label><input type="date" class="form-control form-control-sm" id="fDateTo" onchange="applyFilters()"></div>
+      <div class="col-12 col-md-1"><button class="btn btn-sm btn-outline-secondary w-100" onclick="clearFilters()"><i class="bi bi-x-circle"></i> Reset</button></div>
+    </div>
+  </div>
+  <div class="table-card">
+    <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom"><span class="fw-semibold" id="tblCount">0 comenzi</span><button class="btn btn-sm btn-outline-success" onclick="exportCSV()"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV</button></div>
+    <div class="table-responsive"><table class="table table-hover mb-0" id="tbl"><thead><tr><th style="width:30px"></th><th>Nr. Comanda</th><th>Data</th><th>Tara</th><th>Status</th><th>Produse</th><th>Total</th></tr></thead><tbody id="tblBody"><tr><td colspan="7"><div class="empty-state"><i class="bi bi-box-seam"></i><p>Se incarca comenzile...</p></div></td></tr></tbody></table></div>
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top"><span class="text-muted small" id="pagInfo"></span><nav><ul class="pagination pagination-sm mb-0" id="pagUl"></ul></nav></div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalSettings" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header" style="background:#1c1c1c;color:#fff"><h5 class="modal-title"><i class="bi bi-gear-fill me-2"></i>Configurare API Trendyol</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="settings-section"><h6><i class="bi bi-key-fill me-1"></i>Credentiale API</h6><div class="row g-2"><div class="col-md-4"><label class="form-label small">Supplier ID</label><input type="text" class="form-control form-control-sm" id="supplierId"></div><div class="col-md-4"><label class="form-label small">API Key</label><input type="text" class="form-control form-control-sm" id="apiKey" autocomplete="off"></div><div class="col-md-4"><label class="form-label small">API Secret</label><input type="password" class="form-control form-control-sm" id="apiSecret" autocomplete="off"></div></div></div>
+      <div class="settings-section"><h6><i class="bi bi-globe me-1"></i>Base URLs</h6><div class="row g-2"><div class="col-12"><label class="form-label small">Romania</label><input type="text" class="form-control form-control-sm" id="roUrl" placeholder="https://apigw.trendyol.com"></div><div class="col-12"><label class="form-label small">Bulgaria</label><input type="text" class="form-control form-control-sm" id="bgUrl" placeholder="https://apigw.trendyol.com"></div><div class="col-12"><label class="form-label small">Ungaria</label><input type="text" class="form-control form-control-sm" id="huUrl" placeholder="https://apigw.trendyol.com"></div></div></div>
+      <div class="settings-section"><h6><i class="bi bi-sliders me-1"></i>General</h6><div class="row g-2"><div class="col-md-4"><label class="form-label small">Zile in urma</label><input type="number" class="form-control form-control-sm" id="cfgDays" value="30" min="1" max="365"></div><div class="col-md-4"><label class="form-label small">Comenzi per apel</label><select class="form-select form-select-sm" id="cfgPageSize"><option value="50">50</option><option value="100">100</option><option value="200" selected>200</option></select></div></div></div>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Inchide</button><button type="button" class="btn btn-ty" onclick="saveSettings()"><i class="bi bi-save me-1"></i>Salveaza si Actualizeaza</button></div>
+  </div></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+const DEFAULTS = {
+  RO: { name:'Romania', flag:'RO', currency:'RON', url:'https://apigw.trendyol.com' },
+  BG: { name:'Bulgaria', flag:'BG', currency:'BGN', url:'https://apigw.trendyol.com' },
+  HU: { name:'Ungaria',  flag:'HU', currency:'HUF', url:'https://apigw.trendyol.com' }
+};
+const STATUS_LBL = { Created:'Creat', Picking:'Picking', Invoiced:'Facturat', Shipped:'Expediat', Delivered:'Livrat', Cancelled:'Anulat', UnDelivered:'Nelivrat', Returned:'Returnat', UnPackaged:'Neambalat' };
+let allOrders = [], filtered = [], curPage = 1;
+const PG = 50;
+
+function getSaved() { return JSON.parse(localStorage.getItem('ty_cfg') || '{}'); }
+
+function loadSettingsUI() {
+  const s = getSaved();
+  document.getElementById('supplierId').value = s.supplierId || '';
+  document.getElementById('apiKey').value     = s.apiKey     || '';
+  document.getElementById('apiSecret').value  = s.apiSecret  || '';
+  document.getElementById('roUrl').value      = s.urls?.RO   || DEFAULTS.RO.url;
+  document.getElementById('bgUrl').value      = s.urls?.BG   || DEFAULTS.BG.url;
+  document.getElementById('huUrl').value      = s.urls?.HU   || DEFAULTS.HU.url;
+  document.getElementById('cfgDays').value    = s.days       || 30;
+  document.getElementById('cfgPageSize').value= s.pageSize   || 200;
+}
+
+function saveSettings() {
+  const s = {
+    supplierId: document.getElementById('supplierId').value.trim(),
+    apiKey:     document.getElementById('apiKey').value.trim(),
+    apiSecret:  document.getElementById('apiSecret').value.trim(),
+    urls: {
+      RO: document.getElementById('roUrl').value.trim() || DEFAULTS.RO.url,
+      BG: document.getElementById('bgUrl').value.trim() || DEFAULTS.BG.url,
+      HU: document.getElementById('huUrl').value.trim() || DEFAULTS.HU.url,
+    },
+    days:     parseInt(document.getElementById('cfgDays').value)     || 30,
+    pageSize: parseInt(document.getElementById('cfgPageSize').value) || 200
+  };
+  localStorage.setItem('ty_cfg', JSON.stringify(s));
+  bootstrap.Modal.getInstance(document.getElementById('modalSettings'))?.hide();
+  toast('Setarile au fost salvate!', 'success');
+  fetchAll();
+}
+
+let _debugRaw = null, _debugUrl = null;
+
+async function fetchAllOrders() {
+  const s = getSaved();
+  if (!s.supplierId || !s.apiKey || !s.apiSecret) return [];
+  const baseUrl  = s.urls?.RO || DEFAULTS.RO.url;
+  const pageSize = s.pageSize || 200;
+  const days     = s.days || 30;
+  const endTs    = Date.now();
+  const startTs  = endTs - days * 86400000;
+  const creds    = btoa(s.apiKey + ':' + s.apiSecret);
+  const proxyHeaders = { 'x-trendyol-auth': 'Basic ' + creds, 'x-trendyol-agent': s.supplierId + ' - SelfIntegration' };
+  _debugRaw = null; _debugUrl = null;
+  setStatus('Se conecteaza la API prin server...', 'info');
+  let result = [], page = 0, totalPages = 1;
+  while (page < totalPages && page < 10) {
+    const params = new URLSearchParams({ baseUrl, supplierId: s.supplierId, startDate: startTs, endDate: endTs, page, size: pageSize });
+    try {
+      const resp = await fetch('/api/orders?' + params, { headers: proxyHeaders });
+      const rawText = await resp.text();
+      if (page === 0) _debugRaw = rawText;
+      if (!resp.ok) {
+        let errMsg = rawText;
+        try { errMsg = JSON.parse(rawText)?.error || rawText; } catch {}
+        showErrorDetails(['HTTP ' + resp.status + ': ' + errMsg.slice(0, 300)], baseUrl);
+        return result;
+      }
+      let data;
+      try { data = JSON.parse(rawText); } catch { toast('Raspuns non-JSON', 'danger'); break; }
+      if (page === 0 && data._usedEndpoint) { _debugUrl = data._usedEndpoint; setStatus('Endpoint activ: ' + _debugUrl, 'info'); }
+      totalPages = data.page?.totalPages ?? data.totalPages ?? 1;
+      const content = data.content ?? data.orders ?? data.shipmentPackages ?? data.orderPackages ?? data.data ?? (Array.isArray(data) ? data : null) ?? [];
+      const rows = (Array.isArray(content) ? content : []).map(o => ({ ...o, _c: detectCountry(o) }));
+      result = result.concat(rows);
+      page++;
+    } catch(err) { toast('Eroare: ' + err.message, 'danger'); break; }
+  }
+  return result;
+}
+
+function detectCountry(order) {
+  const currency = order.currencyCode || '';
+  if (currency === 'RON') return 'RO';
+  if (currency === 'BGN') return 'BG';
+  if (currency === 'HUF') return 'HU';
+  return order.shipmentAddress?.countryCode || order.invoiceAddress?.countryCode || '??';
+}
+
+function setStatus(msg, type='info') {
+  const colors = { success:{bg:'#d4edda',color:'#155724',border:'#c3e6cb'}, warning:{bg:'#fff3cd',color:'#856404',border:'#ffc107'}, danger:{bg:'#f8d7da',color:'#721c24',border:'#f5c6cb'}, info:{bg:'#cfe2ff',color:'#084298',border:'#b6d4fe'} };
+  const c = colors[type] || colors.info;
+  const bar = document.getElementById('statusBar');
+  bar.style.display = 'block'; bar.style.background = c.bg; bar.style.color = c.color; bar.style.borderBottom = '2px solid ' + c.border;
+  bar.innerHTML = msg;
+}
+
+function showErrorDetails(errors, baseUrl) {
+  document.getElementById('tblBody').innerHTML = '<tr><td colspan="7"><div style="padding:24px"><h6 class="text-danger">Nu s-a putut conecta la API:</h6><ul style="font-size:.88rem;font-family:monospace">' + errors.map(e => '<li>' + e + '</li>').join('') + '</ul><p class="text-muted small">HTTP 401 = credentiale gresite | HTTP 404 = URL gresit | HTTP 403 = acces interzis</p></div></td></tr>';
+  setStatus('Nu s-a putut conecta la API', 'danger');
+}
+
+async function fetchAll() {
+  const s = getSaved();
+  if (!s.supplierId || !s.apiKey || !s.apiSecret) {
+    toast('Completati credentialele in Setari!', 'warning');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSettings')).show();
+    return;
+  }
+  overlay(true, 'Se preiau comenzile...');
+  document.getElementById('btnRefresh').disabled = true;
+  try {
+    allOrders = await fetchAllOrders();
+    allOrders.sort((a,b) => (b.orderDate||0) - (a.orderDate||0));
+    updateStats(); applyFilters();
+    const now = new Date().toLocaleTimeString('ro-RO');
+    document.getElementById('lastSync').textContent = 'Sync: ' + now;
+    if (allOrders.length > 0) {
+      setStatus(allOrders.length + ' comenzi incarcate la ' + now, 'success');
+    } else if (_debugRaw) {
+      let preview = '';
+      try {
+        const p = JSON.parse(_debugRaw);
+        const totalEl = p.page?.totalElements ?? p.totalElements ?? p.total ?? '?';
+        preview = '<b>totalElements: ' + totalEl + '</b><br><pre style="background:#f8f9fa;padding:10px;border-radius:6px;font-size:.73rem;max-height:260px;overflow:auto">' + JSON.stringify(p,null,2).slice(0,3000).replace(/</g,'&lt;') + '</pre>';
+      } catch(e) { preview = '<pre style="font-size:.73rem">' + _debugRaw.slice(0,1000).replace(/</g,'&lt;') + '</pre>'; }
+      document.getElementById('tblBody').innerHTML = '<tr><td colspan="7"><div style="padding:20px"><h6>Raspuns brut de la API</h6><p class="text-muted small">URL: ' + _debugUrl + '</p>' + preview + '</div></td></tr>';
+      document.getElementById('tblCount').textContent = 'Diagnosticare raspuns API';
+      setStatus('API raspunde dar 0 comenzi gasite. Endpoint: ' + _debugUrl, 'warning');
+      return;
+    } else { setStatus('0 comenzi returnate. Verificati credentialele.', 'warning'); }
+  } finally { overlay(false); document.getElementById('btnRefresh').disabled = false; }
+}
+
+function updateStats() {
+  const n = allOrders.length;
+  const pend   = allOrders.filter(o => ['Created','Picking','Invoiced','UnPackaged'].includes(o.status)).length;
+  const ship   = allOrders.filter(o => o.status === 'Shipped').length;
+  const deliv  = allOrders.filter(o => o.status === 'Delivered').length;
+  const cancel = allOrders.filter(o => ['Cancelled','UnDelivered','Returned'].includes(o.status)).length;
+  const val    = allOrders.filter(o => !['Cancelled','UnDelivered','Returned'].includes(o.status)).reduce((s,o) => s + (o.totalPrice || o.grossAmount || 0), 0);
+  const countries = [...new Set(allOrders.map(o=>o._c))];
+  document.getElementById('sTotal').textContent     = n;
+  document.getElementById('sCountries').textContent = countries.join(' · ');
+  document.getElementById('sPending').textContent   = pend;
+  document.getElementById('sShipped').textContent   = ship;
+  document.getElementById('sDelivered').textContent = deliv;
+  document.getElementById('sCancelled').textContent = cancel;
+  document.getElementById('sValue').textContent     = val.toLocaleString('ro-RO', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function applyFilters() {
+  const q = document.getElementById('fSearch').value.toLowerCase();
+  const country = document.getElementById('fCountry').value;
+  const status  = document.getElementById('fStatus').value;
+  const from    = document.getElementById('fDateFrom').value;
+  const to      = document.getElementById('fDateTo').value;
+  filtered = allOrders.filter(o => {
+    if (country && o._c !== country) return false;
+    if (status  && o.status !== status) return false;
+    if (from) { if (new Date(o.orderDate) < new Date(from)) return false; }
+    if (to)   { if (new Date(o.orderDate) > new Date(to+'T23:59:59')) return false; }
+    if (q) {
+      const num  = (o.orderNumber||'').toLowerCase();
+      const prod = (o.lines||[]).map(l=>(l.productName||'')+' '+(l.merchantSku||'')).join(' ').toLowerCase();
+      if (!num.includes(q) && !prod.includes(q)) return false;
+    }
+    return true;
+  });
+  curPage = 1; render();
+}
+
+function clearFilters() {
+  ['fSearch','fDateFrom','fDateTo'].forEach(id => document.getElementById(id).value = '');
+  ['fCountry','fStatus'].forEach(id => document.getElementById(id).value = '');
+  applyFilters();
+}
+
+function render() {
+  const start = (curPage - 1) * PG;
+  const slice = filtered.slice(start, start + PG);
+  const tbody = document.getElementById('tblBody');
+  document.getElementById('tblCount').textContent = filtered.length + ' comenzi';
+  if (!slice.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="bi bi-inbox"></i><p>Nicio comanda cu filtrele selectate.</p></div></td></tr>';
+    document.getElementById('pagInfo').textContent = '';
+    document.getElementById('pagUl').innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = '';
+  slice.forEach((o, idx) => {
+    const rid = 'r'+(start+idx), did = 'd'+(start+idx);
+    const dt = o.orderDate ? new Date(o.orderDate).toLocaleString('ro-RO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-';
+    const def = DEFAULTS[o._c] || {};
+    const lines = o.lines || [];
+    const price = (o.totalPrice || o.grossAmount || 0).toFixed(2);
+    const cur = o.currencyCode || def.currency || '';
+    const sLbl = STATUS_LBL[o.status] || o.status || '-';
+    let prodHtml = lines.slice(0,2).map(l => '<div class="prod-line"><strong>' + esc(l.productName||l.merchantSku||'-') + '</strong> x' + (l.quantity||1) + (l.merchantSku ? '<br><small class="text-muted">SKU: '+esc(l.merchantSku)+'</small>' : '') + '</div>').join('');
+    if (lines.length > 2) prodHtml += '<div class="prod-more">+' + (lines.length-2) + ' produse...</div>';
+    const tr = document.createElement('tr');
+    tr.className = 'data-row'; tr.id = rid; tr.onclick = () => toggleDetail(did, rid);
+    tr.innerHTML = '<td class="text-center"><i class="bi bi-chevron-right text-muted" id="ico'+did+'"></i></td><td><strong>'+esc(o.orderNumber||'-')+'</strong></td><td><small class="text-muted">'+dt+'</small></td><td>'+esc(o._c||'')+'</td><td><span class="sbadge s-'+o.status+'">'+sLbl+'</span></td><td>'+prodHtml+'</td><td><strong>'+price+'</strong> <small class="text-muted">'+esc(cur)+'</small></td>';
+    tbody.appendChild(tr);
+    const dtr = document.createElement('tr');
+    dtr.id = did; dtr.className = 'detail-row';
+    const prodFull = lines.map(l => '<tr><td>'+esc(l.productName||'-')+'</td><td><code>'+esc(l.merchantSku||'-')+'</code></td><td>'+(l.quantity||1)+'</td><td>'+(l.price||0).toFixed(2)+' '+esc(l.currencyCode||cur)+'</td><td>'+((l.price||0)*(l.quantity||1)).toFixed(2)+' '+esc(l.currencyCode||cur)+'</td></tr>').join('');
+    dtr.innerHTML = '<td colspan="7"><div class="detail-inner"><div class="row g-3"><div class="col-md-8"><h6 class="text-muted mb-2">Produse comanda</h6><table class="table table-sm table-bordered detail-table"><thead><tr><th>Produs</th><th>SKU</th><th>Cant.</th><th>Pret/buc</th><th>Total</th></tr></thead><tbody>'+prodFull+'</tbody></table></div><div class="col-md-4"><h6 class="text-muted mb-2">Detalii</h6><table class="table table-sm detail-table"><tr><td class="text-muted">ID:</td><td>'+(o.id||'-')+'</td></tr><tr><td class="text-muted">Status:</td><td><span class="sbadge s-'+o.status+'">'+sLbl+'</span></td></tr><tr><td class="text-muted">Total:</td><td><strong>'+price+' '+esc(cur)+'</strong></td></tr>'+(o.cargoTrackingNumber?'<tr><td class="text-muted">AWB:</td><td><code>'+esc(o.cargoTrackingNumber)+'</code></td></tr>':'')+(o.cargoProviderName?'<tr><td class="text-muted">Curier:</td><td>'+esc(o.cargoProviderName)+'</td></tr>':'')+'</table></div></div></div></td>';
+    tbody.appendChild(dtr);
+  });
+  renderPag();
+}
+
+function toggleDetail(did, rid) {
+  const dtr = document.getElementById(did);
+  const ico = document.getElementById('ico'+did);
+  const open = dtr.classList.toggle('open');
+  if (ico) ico.style.transform = open ? 'rotate(90deg)' : '';
+}
+
+function renderPag() {
+  const total = Math.ceil(filtered.length / PG);
+  const ul = document.getElementById('pagUl');
+  const s = (curPage-1)*PG+1, e = Math.min(curPage*PG, filtered.length);
+  document.getElementById('pagInfo').textContent = filtered.length ? s+'-'+e+' din '+filtered.length : '';
+  if (total <= 1) { ul.innerHTML = ''; return; }
+  let h = '<li class="page-item '+(curPage===1?'disabled':'')+'"><a class="page-link" href="#" onclick="goPage('+(curPage-1)+');return false">&#8249;</a></li>';
+  for (let i=1; i<=total; i++) {
+    if (i===1||i===total||(i>=curPage-2&&i<=curPage+2)) h += '<li class="page-item '+(i===curPage?'active':'')+'"><a class="page-link" href="#" onclick="goPage('+i+');return false">'+i+'</a></li>';
+    else if (i===curPage-3||i===curPage+3) h += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+  }
+  h += '<li class="page-item '+(curPage===total?'disabled':'')+'"><a class="page-link" href="#" onclick="goPage('+(curPage+1)+');return false">&#8250;</a></li>';
+  ul.innerHTML = h;
+}
+
+function goPage(p) {
+  const total = Math.ceil(filtered.length / PG);
+  if (p<1||p>total) return;
+  curPage = p; render();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function exportCSV() {
+  if (!filtered.length) { toast('Nu exista comenzi de exportat.','warning'); return; }
+  const rows = [['Nr. Comanda','Data','Tara','Status','Produse','Total','Moneda','AWB','Curier']];
+  filtered.forEach(o => {
+    const dt = o.orderDate ? new Date(o.orderDate).toLocaleDateString('ro-RO') : '';
+    const prod = (o.lines||[]).map(l=>(l.productName||l.merchantSku||'')+'x'+(l.quantity||1)).join('; ');
+    rows.push([o.orderNumber||'',dt,o._c||'',o.status||'',prod,(o.totalPrice||o.grossAmount||0).toFixed(2),o.currencyCode||'',o.cargoTrackingNumber||'',o.cargoProviderName||'']);
+  });
+  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'trendyol_comenzi_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  toast('CSV exportat!','success');
+}
+
+function overlay(show, text='Se incarca...') {
+  document.getElementById('overlay').classList.toggle('on', show);
+  document.getElementById('overlayText').textContent = text;
+}
+
+function toast(msg, type='info') {
+  const colors={success:'#198754',danger:'#dc3545',warning:'#856404',info:'#0d6efd'};
+  const bg={success:'#d4edda',danger:'#f8d7da',warning:'#fff3cd',info:'#cfe2ff'};
+  const d=document.createElement('div'); d.className='toast-msg';
+  d.style.background=bg[type]||bg.info; d.style.color=colors[type]||colors.info;
+  d.style.border='1px solid '+(colors[type]||colors.info);
+  d.textContent=msg; document.getElementById('toasts').appendChild(d);
+  setTimeout(()=>d.remove(),5000);
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date(), ago30 = new Date(today - 30*86400000);
+  document.getElementById('fDateFrom').value = ago30.toISOString().slice(0,10);
+  document.getElementById('fDateTo').value   = today.toISOString().slice(0,10);
+  document.getElementById('modalSettings').addEventListener('show.bs.modal', loadSettingsUI);
+  const s = getSaved();
+  if (!s.supplierId || !s.apiKey) {
+    localStorage.setItem('ty_cfg', JSON.stringify({
+      supplierId: '1126421', apiKey: 'FS2uWA6fF96F7Tp3RXXD', apiSecret: 'cDjSMWLPw7tcDyUV1HTY',
+      urls: { RO: 'https://apigw.trendyol.com', BG: 'https://apigw.trendyol.com', HU: 'https://apigw.trendyol.com' },
+      days: 365, pageSize: 200
+    }));
+  }
+  fetchAll();
+});
+</script>
+</body>
+</html>
