@@ -129,6 +129,7 @@ function loadSettingsUI() {
   document.getElementById('huUrl').value      = s.urls?.HU   || DEFAULTS.HU.url;
   document.getElementById('cfgDays').value    = s.days       || 30;
   document.getElementById('cfgPageSize').value= s.pageSize   || 200;
+    document.getElementById('integrationCode').value = s.integrationCode || '';
 }
 
 function saveSettings() {
@@ -142,7 +143,8 @@ function saveSettings() {
       HU: document.getElementById('huUrl').value.trim() || DEFAULTS.HU.url,
     },
     days:     parseInt(document.getElementById('cfgDays').value)     || 30,
-    pageSize: parseInt(document.getElementById('cfgPageSize').value) || 200
+    pageSize: parseInt(document.getElementById('cfgPageSize').value) || 200,
+    integrationCode: document.getElementById('integrationCode').value.trim()
   };
   localStorage.setItem('ty_cfg', JSON.stringify(s));
   bootstrap.Modal.getInstance(document.getElementById('modalSettings'))?.hide();
@@ -393,9 +395,9 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('ty_cfg', JSON.stringify({
       supplierId: '1126421', apiKey: 'FS2uWA6fF96F7Tp3RXXD', apiSecret: 'cDjSMWLPw7tcDyUV1HTY',
       urls: { RO: 'https://apigw.trendyol.com', BG: 'https://apigw.trendyol.com', HU: 'https://apigw.trendyol.com' },
-      days: 365, pageSize: 200
+      days: 365, pageSize: 200,
+      integrationCode: '7f338d12-686e-4689-b92b-b5e24893a5e8'
     }));
-  }
   } else if (!s.integrationCode) {
     s.integrationCode = '7f338d12-686e-4689-b92b-b5e24893a5e8';
     localStorage.setItem('ty_cfg', JSON.stringify(s));
